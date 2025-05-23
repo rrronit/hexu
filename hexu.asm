@@ -53,9 +53,6 @@ section .data
     mime_css db "Content-Type: text/css", 0x0D, 0x0A
     mime_css_len equ $ - mime_css
 
-    mime_jpg db "Content-Type: image/jpeg", 0x0D, 0x0A
-    mime_jpg_len equ $ - mime_jpg
-
     mime_js db "Content-Type: application/javascript", 0x0D, 0x0A
     mime_js_len equ $ - mime_js
 
@@ -78,7 +75,7 @@ section .bss
     path resb 1024
     path_len resb 1024
     full_path resb 1024
-    file_content resb 4096
+    file_content resb 20000
 
 section .text
     global _start
@@ -174,13 +171,12 @@ read_client:
     syscall
     cmp rax, 0
     jle close_client
-    mov r14, rax             ; store read length
 
     ; print client request to stdout
     mov rax, 1
     mov rdi, 1
     mov rsi, buffer
-    mov rdx, r14
+    mov rdx, rax
     syscall
     
     call parse_method_and_path
@@ -270,18 +266,38 @@ handle_get_request:
     jl not_found
     mov r15, rax           
 
+    ;read file
     mov rdi, r15
     mov rax, 0             
     mov rsi, file_content
-    mov rdx, 2048
-    syscall
-    mov r14, rax           
+    mov rdx, 1024
+    xor rbx, rbx
 
-    mov rax, 3
+read_loop:
+    mov rax, 0              
+    lea rsi, [file_content + rbx]  
+    mov rdx, 1024          
+    syscall
+    cmp rax, 0
+    je done_reading         
+    js read_error           
+    cmp rax, 1024
+    add rbx, rax            
+    jmp read_loop
+
+done_reading:
+    mov rax, 3              
     mov rdi, r15
+    mov r14, rbx
+    syscall
+    jmp continue_program
+
+read_error:
+    mov rax, 60
+    mov rdi, 1
     syscall
 
-    mov rax, r14            
+continue_program:
 
     mov rax, 1
     mov rdi, r13
@@ -441,34 +457,18 @@ detect_mime_type:
     sub rsi, 5                  
     
     cmp byte [rsi], '.'
-    jne .check_jpg
+    jne .check_js
     cmp byte [rsi+1], 'h'
-    jne .check_jpg
+    jne .check_js
     cmp byte [rsi+2], 't'
-    jne .check_jpg
+    jne .check_js
     cmp byte [rsi+3], 'm'
-    jne .check_jpg
+    jne .check_js
     cmp byte [rsi+4], 'l'
-    jne .check_jpg
+    jne .check_js
     
     mov rsi, mime_html
     mov rcx, mime_html_len
-    ret
-
-.check_jpg:
-    mov rsi, rdi
-    sub rsi, 4                  
-    cmp byte [rsi], '.'
-    jne .check_js
-    cmp byte [rsi+1], 'j'
-    jne .check_js
-    cmp byte [rsi+2], 'p'
-    jne .check_js
-    cmp byte [rsi+3], 'g'
-    jne .check_js
-    
-    mov rsi, mime_jpg
-    mov rcx, mime_jpg_len
     ret
 
 .check_js:
