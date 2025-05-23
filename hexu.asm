@@ -53,6 +53,9 @@ section .data
     mime_css db "Content-Type: text/css", 0x0D, 0x0A
     mime_css_len equ $ - mime_css
 
+    mime_svg db "Content-Type: image/svg+xml", 0x0D, 0x0A
+    mime_svg_len equ $ - mime_svg
+
     mime_js db "Content-Type: application/javascript", 0x0D, 0x0A
     mime_js_len equ $ - mime_js
 
@@ -75,7 +78,7 @@ section .bss
     path resb 1024
     path_len resb 1024
     full_path resb 1024
-    file_content resb 20000
+    file_content resb 1000000
 
 section .text
     global _start
@@ -457,22 +460,53 @@ detect_mime_type:
     sub rsi, 5                  
     
     cmp byte [rsi], '.'
-    jne .check_js
+    jne .check_css
     cmp byte [rsi+1], 'h'
-    jne .check_js
+    jne .check_css
     cmp byte [rsi+2], 't'
-    jne .check_js
+    jne .check_css
     cmp byte [rsi+3], 'm'
-    jne .check_js
+    jne .check_css
     cmp byte [rsi+4], 'l'
-    jne .check_js
+    jne .check_css
     
     mov rsi, mime_html
     mov rcx, mime_html_len
     ret
 
-.check_js:
+.check_css:
+    mov rsi, rdi
+    sub rsi, 4
+    cmp byte [rsi], '.'
+    jne .check_svg
+    cmp byte [rsi+1], 'c'
+    jne .check_svg
+    cmp byte [rsi+2], 's'
+    jne .check_svg
+    cmp byte [rsi+3], 's'
+    jne .check_svg
+
+    mov rsi, mime_css
+    mov rcx, mime_css_len
+    ret
+
+.check_svg:     
+    mov rsi, rdi
+    sub rsi, 4
+    cmp byte [rsi], '.'
+    jne .check_js
+    cmp byte [rsi+1], 's'
+    jne .check_js
+    cmp byte [rsi+2], 'v'
+    jne .check_js
+    cmp byte [rsi+3], 'g'
+    jne .check_js
     
+    mov rsi, mime_svg
+    mov rcx, mime_svg_len
+    ret
+
+.check_js:
     mov rsi, rdi
     sub rsi, 3                  
     
