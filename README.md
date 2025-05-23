@@ -33,9 +33,11 @@ ld -o hexu hexu.o
 ```
 
 Make sure you have a public/ directory in the same folder as the server binary with some files to serve:
+```
 public/
 ├── index.html
 ├── style.css
 ├── script.js
 └── image.svg
+```
 Then access it via browser at: http://localhost:8080/index.html
